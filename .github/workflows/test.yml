@@ -113,6 +113,8 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Start local services and create the demo env file
         run: pnpm demo:setup
+      - name: Verify the local tables exist
+        run: node bin/setup-local-dynamodb.js
       - name: Run end-to-end tests that need no external services
         run: pnpm exec playwright test --project=chromium --grep-invert "@live|@integration"
         env:
