@@ -114,7 +114,12 @@ jobs:
       - name: Start local services and create the demo env file
         run: pnpm demo:setup
       - name: Verify the local tables exist
-        run: node bin/setup-local-dynamodb.js
+        run: |
+          for i in $(seq 1 30); do
+            curl -s -o /dev/null http://127.0.0.1:8001 && break
+            sleep 2
+          done
+          node bin/setup-local-dynamodb.js
       - name: Run end-to-end tests that need no external services
         run: pnpm exec playwright test --project=chromium --grep-invert "@live|@integration"
         env:
