@@ -1,5 +1,7 @@
 # Isabel
 
+[![CI](https://github.com/kevinzwu/snowflake-chatbot-isabel/actions/workflows/test.yml/badge.svg)](https://github.com/kevinzwu/snowflake-chatbot-isabel/actions/workflows/test.yml)
+
 An open-source chat interface for security vulnerability management, built on
 [Snowflake Cortex Agents](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents).
 Ask questions in plain English about hosts, code findings, applications and
