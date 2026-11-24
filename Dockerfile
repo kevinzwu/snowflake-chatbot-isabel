@@ -1,5 +1,5 @@
 # Use the official Node.js 20 LTS image for better compatibility
-FROM node:20.20.2-alpine AS base
+FROM node:26.13.1-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
