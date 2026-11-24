@@ -1,0 +1,36 @@
+{
+  "typescript.preferences.quoteStyle": "single",
+  "typescript.preferences.includePackageJsonAutoImports": "auto",
+  "typescript.suggest.autoImports": true,
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "typescript.suggest.completeFunctionCalls": true,
+  "typescript.inlayHints.parameterNames.enabled": "literals",
+  "typescript.inlayHints.parameterTypes.enabled": true,
+  "typescript.inlayHints.variableTypes.enabled": true,
+  "typescript.inlayHints.propertyDeclarationTypes.enabled": true,
+  "typescript.inlayHints.functionLikeReturnTypes.enabled": true,
+  "typescript.inlayHints.enumMemberValues.enabled": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "explicit"
+  },
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "files.associations": {
+    "*.json": "jsonc"
+  },
+  "emmet.includeLanguages": {
+    "typescript": "typescriptreact",
+    "javascript": "javascriptreact"
+  },
+  "debug.terminal.clearBeforeReusing": true,
+  "debug.console.fontSize": 14,
+  "debug.console.lineHeight": 20,
+  "snyk.advanced.autoSelectOrganization": true,
+  "chat.tools.terminal.autoApprove": {
+    "/^ls -a \\| grep -i 'nvmrc\\\\\\|node-version\\\\\\|tool-versions'; grep -n -A3 '\"engines\"' package\\.json; grep -n 'FROM\\\\\\|node' Dockerfile \\| head; grep -rn \"node-version\" \\.github/workflows \\| head; sed -n 118,124p pnpm-lock\\.yaml; node -v$/": {
+      "approve": true,
+      "matchCommandLine": true
+    }
+  }
+}

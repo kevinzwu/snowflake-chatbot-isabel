@@ -1,0 +1,9 @@
+# Copy to backend.hcl (gitignored) and fill in the bucket from
+# `terraform -chdir=../bootstrap output state_bucket`, then:
+#
+#   terraform init -backend-config=backend.hcl
+#
+# Use a different key per environment so each gets its own state.
+bucket = "REPLACE_ME-tfstate-123456789012"
+key    = "app/staging.tfstate"
+region = "us-east-1"

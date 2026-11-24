@@ -1,0 +1,91 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+pnpm-debug.log*
+.pnpm-store
+
+# Next.js build output
+.next/
+out/
+build/
+dist/
+
+# Testing
+coverage/
+.nyc_output
+
+# Environment files (should be set via secrets manager)
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+.env*.local
+
+# Security: RSA keys excluded from build context
+# BuildKit secrets are passed via --secret flag, not build context
+# This prevents accidental inclusion in image layers
+.key/
+
+# Git
+.git
+.gitignore
+.github
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Terraform
+deploy/aws/
+*.tfstate
+*.tfstate.backup
+.terraform/
+
+# Documentation (not needed in container)
+*.md
+!README.md
+
+# Scripts (not needed at runtime)
+bin/
+scripts/
+
+# Data files
+data/
+
+# Test files
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+__tests__/
+test/
+tests/
+
+# Deployment configs
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI/CD
+.gitlab-ci.yml
+.travis.yml
+azure-pipelines.yml
+
+# Misc
+*.bak
+*.tmp
+*.temp
+.cache

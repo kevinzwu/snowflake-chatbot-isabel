@@ -1,0 +1,11 @@
+.next
+node_modules
+coverage
+playwright-report
+test-results
+playwright/.auth
+pnpm-lock.yaml
+public
+.terraform
+deploy/aws/**/*.tf
+*.tsbuildinfo

@@ -1,0 +1,31 @@
+# Local development services
+
+services:
+  # DynamoDB Local for chat history development
+  # Note: Using in-memory mode (-inMemory) for reliability. Data won't persist across restarts.
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: isabel-dynamodb-local
+    ports:
+      - "8001:8000"
+    command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:8000 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # S3-compatible store for conversation message overflow development.
+  # Conversations whose serialized messages exceed 350KB are stored here
+  # instead of inline in DynamoDB (see lib/dynamodb/conversation-storage.ts).
+  # Without this, saving a large conversation locally fails with a 500
+  # ("CONVERSATION_S3_BUCKET environment variable is not configured").
+  s3:
+    image: adobe/s3mock:latest
+    container_name: isabel-s3
+    ports:
+      # Bound to loopback only: this container stores conversation content
+      # (potentially sensitive data pasted during testing) with no credentials.
+      - "127.0.0.1:9000:9090"
+    environment:
+      initialBuckets: isabel-local-conversations

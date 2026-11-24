@@ -1,0 +1,17 @@
+-- Isabel sample dataset, step 4: Cortex Search over the vulnerability catalog.
+-- SEARCH_SERVICE_PATH points at this service. The app always sends the search tool.
+-- The CVE ID is part of the indexed text so that a question naming a CVE finds its entry.
+USE SCHEMA ISABEL_SAMPLE.SECURITY;
+
+CREATE OR REPLACE CORTEX SEARCH SERVICE VULNERABILITY_CATALOG_SEARCH
+  ON SEARCH_TEXT
+  ATTRIBUTES CATALOG_ID, TITLE, SEVERITY, CATEGORY, CVE_ID
+  WAREHOUSE = ISABEL_WH
+  TARGET_LAG = '1 day'
+AS (
+  SELECT CATALOG_ID, TITLE, SEVERITY, CATEGORY, CVE_ID,
+         COALESCE(CVE_ID || ' ', '') || TITLE || '. ' || COALESCE(SUMMARY, '') || ' ' || COALESCE(THREAT, '') || ' ' || COALESCE(SOLUTION, '') AS SEARCH_TEXT
+  FROM VULNERABILITY_CATALOG
+);
+
+GRANT USAGE ON CORTEX SEARCH SERVICE VULNERABILITY_CATALOG_SEARCH TO ROLE ISABEL_APP_ROLE;

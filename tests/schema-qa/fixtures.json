@@ -1,0 +1,22 @@
+{
+  "TEAMS": {
+    "column": "TEAM_ID",
+    "value": "TEAM-001"
+  },
+  "APPLICATIONS": {
+    "column": "APPLICATION_ID",
+    "value": "1001"
+  },
+  "VULNERABILITY_CATALOG": {
+    "column": "CATALOG_ID",
+    "value": "1"
+  },
+  "HOST_VULNERABILITIES": {
+    "column": "FINDING_ID",
+    "value": "HV-000001"
+  },
+  "CODE_FINDINGS": {
+    "column": "FINDING_ID",
+    "value": "CF-000001"
+  }
+}

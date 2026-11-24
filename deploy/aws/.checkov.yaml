@@ -1,0 +1,38 @@
+# Checkov configuration. Each skip is a deliberate trade-off for a small,
+# single-account deployment; tighten them if your policy requires.
+framework:
+  - terraform
+quiet: true
+skip-path:
+  - ".*/.terraform"
+skip-check:
+  # Encryption keys: AWS-managed keys are used throughout. Switch to customer-managed
+  # keys (and add the key policies) if your compliance regime needs them.
+  - CKV_AWS_119 # DynamoDB CMK
+  - CKV_AWS_136 # ECR KMS
+  - CKV_AWS_145 # S3 KMS by default
+  - CKV_AWS_149 # Secrets Manager CMK
+  - CKV_AWS_158 # CloudWatch log group KMS
+  # Secrets are set by hand from Snowflake and Azure AD; there is nothing to rotate automatically.
+  - CKV2_AWS_57
+  # ECR tags are mutable because bin/deploy.sh moves the <environment> tag.
+  - CKV_AWS_51
+  # Log retention is configurable (log_retention_days); the default is 30 days.
+  - CKV_AWS_338
+  # Without a domain the demo serves plain HTTP; with one, HTTP redirects to HTTPS.
+  - CKV_AWS_2
+  - CKV_AWS_103
+  - CKV_AWS_378
+  - CKV2_AWS_20
+  # The load balancer is public by design; restrict with allowed_ingress_cidrs or internal = true.
+  - CKV_AWS_260
+  - CKV2_AWS_28 # WAF is an add-on cost
+  - CKV_AWS_150 # deletion_protection is a variable (off for easy teardown)
+  # Operational extras left out of the default stack.
+  - CKV2_AWS_11 # VPC flow logs
+  - CKV_AWS_394 # availability zone pinning
+  # Bucket extras for the optional access-log bucket and the state bucket.
+  - CKV_AWS_18
+  - CKV_AWS_144
+  - CKV2_AWS_61
+  - CKV2_AWS_62

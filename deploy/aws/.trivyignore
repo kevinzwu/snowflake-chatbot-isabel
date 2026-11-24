@@ -1,0 +1,6 @@
+# Deliberate trade-offs; see .checkov.yaml for the matching Checkov skips.
+AVD-AWS-0053   # The load balancer is public by design (internal = true to change)
+AVD-AWS-0054   # Plain HTTP only when no domain is configured (demo)
+AVD-AWS-0132   # AWS-managed S3 encryption keys
+AVD-AWS-0031   # ECR tags are mutable: bin/deploy.sh moves the <environment> tag
+aws-vpc-no-public-egress-sgr   # Tasks need outbound HTTPS to ECR, Snowflake and Azure AD

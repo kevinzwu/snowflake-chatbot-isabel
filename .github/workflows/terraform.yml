@@ -1,0 +1,76 @@
+name: Terraform
+
+# Static checks only. This workflow never runs plan or apply and holds no cloud credentials.
+
+on:
+  pull_request:
+    paths:
+      - "deploy/aws/**"
+      - ".github/workflows/terraform.yml"
+  push:
+    branches: [main]
+    paths:
+      - "deploy/aws/**"
+      - ".github/workflows/terraform.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: fmt, validate, tflint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.2
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive -diff deploy/aws
+
+      - name: terraform validate
+        run: |
+          for dir in deploy/aws/app deploy/aws/bootstrap; do
+            terraform -chdir="$dir" init -backend=false -input=false
+            terraform -chdir="$dir" validate
+          done
+
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.55.1
+
+      - name: tflint
+        run: |
+          tflint --config "$PWD/deploy/aws/.tflint.hcl" --chdir deploy/aws --init
+          for dir in app bootstrap; do
+            tflint --config "$PWD/deploy/aws/.tflint.hcl" --chdir "deploy/aws/$dir" --minimum-failure-severity=error
+          done
+
+  security:
+    name: trivy, checkov
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: trivy config
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: deploy/aws
+          severity: HIGH,CRITICAL
+          trivyignores: deploy/aws/.trivyignore
+          exit-code: "1"
+
+      - name: checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: deploy/aws
+          config_file: deploy/aws/.checkov.yaml

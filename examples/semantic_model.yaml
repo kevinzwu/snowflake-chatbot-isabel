@@ -1,0 +1,653 @@
+name: Isabel_Security_Sample
+description: |
+  Sample security vulnerability data for Isabel. Five tables in ISABEL_SAMPLE.SECURITY, all synthetic.
+
+  HOST_VULNERABILITIES is the default table for questions about vulnerabilities on hosts and servers. Each row is
+  one scanner detection of a catalog entry on one host. VULNERABILITY_CATALOG describes what each detection means
+  (severity, CVE, CVSS, EPSS, whether it is exploited in the wild, and the fix). CODE_FINDINGS holds vulnerable
+  third-party libraries found by code scanning, and it is separate from host findings. APPLICATIONS is the
+  application inventory with criticality and service level. TEAMS lists the owning teams and their last security
+  assessment.
+
+  Both finding tables join to APPLICATIONS and TEAMS, and APPLICATIONS joins to TEAMS. Host vulnerabilities also
+  join to the catalog. Use left outer joins so rows without an application or team are kept.
+
+  STATUS values differ by table. HOST_VULNERABILITIES.STATUS is Active, Fixed or Reopened, and open means Active
+  or Reopened. CODE_FINDINGS.STATUS is Open, Fixed or Ignored.
+
+tables:
+  - name: TEAMS
+    description: Teams that own applications and findings, with the lead, the security champion and the last security assessment.
+    base_table:
+      database: ISABEL_SAMPLE
+      schema: SECURITY
+      table: TEAMS
+    primary_key:
+      columns:
+        - TEAM_ID
+    dimensions:
+      - name: TEAM_ID
+        synonyms: [team_key, owning_team_id]
+        description: Unique team identifier. Joins to TEAM_ID in APPLICATIONS, HOST_VULNERABILITIES and CODE_FINDINGS.
+        expr: TEAM_ID
+        data_type: VARCHAR(20)
+        unique: true
+        sample_values: [TEAM-001, TEAM-002, TEAM-003]
+      - name: TEAM_NAME
+        synonyms: [team, owning_team, squad]
+        description: Name of the team.
+        expr: TEAM_NAME
+        data_type: VARCHAR(100)
+        sample_values:
+          [Platform Security, Payments Engineering, Identity Services]
+      - name: ORGANIZATION
+        synonyms: [org, department, division]
+        description: Organization the team belongs to (Engineering, Infrastructure or Product).
+        expr: ORGANIZATION
+        data_type: VARCHAR(100)
+        sample_values: [Engineering, Infrastructure, Product]
+      - name: TEAM_LEAD
+        synonyms: [lead, manager, owner]
+        description: Person who leads the team.
+        expr: TEAM_LEAD
+        data_type: VARCHAR(100)
+        sample_values: [Avery Chen, Jordan Ellis, Morgan Patel]
+      - name: SECURITY_CHAMPION
+        synonyms: [champion, security_contact]
+        description: Team member responsible for security.
+        expr: SECURITY_CHAMPION
+        data_type: VARCHAR(100)
+        sample_values: [Noor Haddad, Lena Fischer, Tomas Reyes]
+      - name: CONTACT_EMAIL
+        synonyms: [email, team_email]
+        description: Contact email address for the team lead.
+        expr: CONTACT_EMAIL
+        data_type: VARCHAR(200)
+        sample_values: [avery.chen@example.com, jordan.ellis@example.com]
+    time_dimensions:
+      - name: LAST_ASSESSMENT_DATE
+        synonyms: [last_assessed, assessment_date, last_review]
+        description: Date of the team's last security assessment. Empty for teams that have never been assessed.
+        expr: LAST_ASSESSMENT_DATE
+        data_type: DATE
+    facts:
+      - name: ASSESSMENT_SCORE
+        synonyms: [security_score, maturity_score]
+        description: Score from the last security assessment, 0 to 100. Higher is better. Empty if never assessed.
+        expr: ASSESSMENT_SCORE
+        data_type: NUMBER(5,1)
+
+  - name: APPLICATIONS
+    description: Application inventory with business criticality, service level, lifecycle stage and owning team.
+    base_table:
+      database: ISABEL_SAMPLE
+      schema: SECURITY
+      table: APPLICATIONS
+    primary_key:
+      columns:
+        - APPLICATION_ID
+    dimensions:
+      - name: APPLICATION_ID
+        synonyms: [app_id, application_key]
+        description: Unique application identifier. Joins to APPLICATION_ID in HOST_VULNERABILITIES and CODE_FINDINGS.
+        expr: APPLICATION_ID
+        data_type: NUMBER(10,0)
+        unique: true
+        sample_values: ["1001", "1002", "1003"]
+      - name: APPLICATION_NAME
+        synonyms: [app, app_name, application, service]
+        description: Name of the application.
+        expr: APPLICATION_NAME
+        data_type: VARCHAR(100)
+        sample_values: [Atlas Portal, Beacon Gateway, Cobalt Ledger]
+      - name: APPLICATION_GROUP
+        synonyms: [app_group, portfolio, business_area]
+        description: Group the application belongs to (Customer Experience, Platform Services, Finance, Operations or Data and Analytics).
+        expr: APPLICATION_GROUP
+        data_type: VARCHAR(100)
+        sample_values: [Customer Experience, Finance, Operations]
+      - name: CRITICALITY
+        synonyms: [business_criticality, importance, tier_of_importance]
+        description: Business criticality of the application, one of Critical, High, Medium or Low.
+        expr: CRITICALITY
+        data_type: VARCHAR(20)
+        sample_values: [Critical, High, Medium, Low]
+      - name: SERVICE_LEVEL
+        synonyms: [tier, service_tier, sla_tier]
+        description: Service level tier, one of Tier 1, Tier 2 or Tier 3. Tier 1 is the most important.
+        expr: SERVICE_LEVEL
+        data_type: VARCHAR(20)
+        sample_values: [Tier 1, Tier 2, Tier 3]
+      - name: LIFECYCLE_STATUS
+        synonyms: [lifecycle, stage, app_status]
+        description: Lifecycle stage, one of Production, Development or Retiring.
+        expr: LIFECYCLE_STATUS
+        data_type: VARCHAR(30)
+        sample_values: [Production, Development, Retiring]
+      - name: INTERNET_FACING
+        synonyms: [public, externally_exposed, exposed_to_internet]
+        description: True if the application is reachable from the internet.
+        expr: INTERNET_FACING
+        data_type: BOOLEAN
+        sample_values: ["TRUE", "FALSE"]
+      - name: TEAM_ID
+        synonyms: [owning_team_id]
+        description: Team that owns the application. Joins to TEAMS.TEAM_ID.
+        expr: TEAM_ID
+        data_type: VARCHAR(20)
+        sample_values: [TEAM-001, TEAM-002, TEAM-003]
+
+  - name: VULNERABILITY_CATALOG
+    description: Reference list of vulnerability types the scanner can report, with severity, CVE, CVSS and EPSS scores, exploitation status and remediation guidance. Free-text fields are also available through the catalog search tool.
+    base_table:
+      database: ISABEL_SAMPLE
+      schema: SECURITY
+      table: VULNERABILITY_CATALOG
+    primary_key:
+      columns:
+        - CATALOG_ID
+    dimensions:
+      - name: CATALOG_ID
+        synonyms: [vulnerability_id, definition_id, check_id]
+        description: Unique catalog entry identifier. Joins to CATALOG_ID in HOST_VULNERABILITIES.
+        expr: CATALOG_ID
+        data_type: NUMBER(10,0)
+        unique: true
+        sample_values: ["1", "2", "3"]
+      - name: TITLE
+        synonyms: [name, vulnerability_name, vulnerability_title]
+        description: Short title of the vulnerability.
+        expr: TITLE
+        data_type: VARCHAR(300)
+        sample_values:
+          [
+            "Apache Log4j2 JNDI Remote Code Execution [Linux]",
+            "HTTP/2 Rapid Reset Denial of Service [Container image]",
+          ]
+      - name: SEVERITY
+        synonyms: [catalog_severity, risk_level]
+        description: Severity of the vulnerability, one of Critical, High, Medium or Low.
+        expr: SEVERITY
+        data_type: VARCHAR(20)
+        sample_values: [Critical, High, Medium, Low]
+      - name: CATEGORY
+        synonyms: [type, vulnerability_type, class]
+        description: Kind of component affected (Application, Library, Operating System, Network or Configuration).
+        expr: CATEGORY
+        data_type: VARCHAR(50)
+        sample_values:
+          [Application, Library, Operating System, Network, Configuration]
+      - name: CVE_ID
+        synonyms: [cve, cve_number]
+        description: CVE identifier. Empty for configuration findings, and the same CVE can appear on more than one catalog entry.
+        expr: CVE_ID
+        data_type: VARCHAR(30)
+        sample_values: [CVE-2021-44228, CVE-2023-44487, CVE-2024-3094]
+      - name: ACTIVELY_EXPLOITED
+        synonyms:
+          [exploited, exploited_in_the_wild, known_exploited, active_exploit]
+        description: Whether exploitation in the wild is known, Yes or No.
+        expr: ACTIVELY_EXPLOITED
+        data_type: VARCHAR(10)
+        sample_values: ["Yes", "No"]
+      - name: SUMMARY
+        synonyms: [description, details]
+        description: What the vulnerability is.
+        expr: SUMMARY
+        data_type: VARCHAR(2000)
+        sample_values:
+          [
+            Log4j2 versions before 2.15.0 evaluate JNDI lookups in logged messages.,
+          ]
+      - name: THREAT
+        synonyms: [impact, risk_description]
+        description: What an attacker can do with the vulnerability.
+        expr: THREAT
+        data_type: VARCHAR(2000)
+        sample_values: [A local unprivileged user can gain root.]
+      - name: SOLUTION
+        synonyms: [remediation, fix, mitigation]
+        description: How to remediate the vulnerability.
+        expr: SOLUTION
+        data_type: VARCHAR(2000)
+        sample_values: [Upgrade sudo to 1.9.5p2 or later.]
+    time_dimensions:
+      - name: PUBLISHED_DATE
+        synonyms: [disclosed, disclosure_date, cve_published]
+        description: Date the vulnerability was publicly disclosed. Empty for configuration findings.
+        expr: PUBLISHED_DATE
+        data_type: DATE
+    facts:
+      - name: CVSS_SCORE
+        synonyms: [cvss, cvss_base_score, base_score]
+        description: CVSS v3 base score, 0.0 to 10.0. Illustrative values. Empty for configuration findings.
+        expr: CVSS_SCORE
+        data_type: NUMBER(3,1)
+      - name: EPSS_SCORE
+        synonyms: [epss, exploit_probability, exploit_prediction]
+        description: EPSS exploit probability from 0 to 1. Illustrative values. Empty for configuration findings.
+        expr: EPSS_SCORE
+        data_type: NUMBER(5,4)
+
+  - name: HOST_VULNERABILITIES
+    description: Vulnerabilities detected by network and host scanning. One row per detection of a catalog entry on a host. DEFAULT TABLE for questions about vulnerabilities, hosts, servers, scans, SLAs and remediation timelines.
+    base_table:
+      database: ISABEL_SAMPLE
+      schema: SECURITY
+      table: HOST_VULNERABILITIES
+    primary_key:
+      columns:
+        - FINDING_ID
+    dimensions:
+      - name: FINDING_ID
+        synonyms: [detection_id, host_finding_id]
+        description: Unique identifier of the detection.
+        expr: FINDING_ID
+        data_type: VARCHAR(30)
+        unique: true
+        sample_values: [HV-000001, HV-000002]
+      - name: CATALOG_ID
+        synonyms: [vulnerability_id]
+        description: Catalog entry that was detected. Joins to VULNERABILITY_CATALOG.CATALOG_ID.
+        expr: CATALOG_ID
+        data_type: NUMBER(10,0)
+        sample_values: ["17", "42", "101"]
+      - name: APPLICATION_ID
+        synonyms: [app_id]
+        description: Application the host belongs to. Empty if the host could not be mapped to an application. Joins to APPLICATIONS.APPLICATION_ID.
+        expr: APPLICATION_ID
+        data_type: NUMBER(10,0)
+        sample_values: ["1001", "1002"]
+      - name: TEAM_ID
+        synonyms: [owning_team_id]
+        description: Team that owns the host. Empty if unassigned. Joins to TEAMS.TEAM_ID.
+        expr: TEAM_ID
+        data_type: VARCHAR(20)
+        sample_values: [TEAM-001, TEAM-002]
+      - name: HOSTNAME
+        synonyms: [host, server, fqdn, dns_name, machine]
+        description: Fully qualified host name.
+        expr: HOSTNAME
+        data_type: VARCHAR(200)
+        sample_values: [atlas-web-03.example.com, delta-db-12.example.com]
+      - name: IP_ADDRESS
+        synonyms: [ip, ipv4, address]
+        description: IPv4 address of the host.
+        expr: IP_ADDRESS
+        data_type: VARCHAR(45)
+        sample_values: [192.0.2.28, 198.51.100.90, 203.0.113.168]
+      - name: OPERATING_SYSTEM
+        synonyms: [os, platform]
+        description: Operating system of the host.
+        expr: OPERATING_SYSTEM
+        data_type: VARCHAR(100)
+        sample_values: [Ubuntu 22.04, Windows Server 2019, Amazon Linux 2]
+      - name: PORT
+        synonyms: [port_number, service_port]
+        description: Network port where the vulnerability was detected.
+        expr: PORT
+        data_type: NUMBER(5,0)
+        sample_values: ["22", "443", "3389"]
+      - name: PROTOCOL
+        synonyms: [network_protocol]
+        description: Network protocol of the detection.
+        expr: PROTOCOL
+        data_type: VARCHAR(10)
+        sample_values: [TCP]
+      - name: SEVERITY
+        synonyms: [risk, risk_level, priority]
+        description: Severity of the detection, one of Critical, High, Medium or Low. Determines the remediation deadline (15, 30, 90 or 180 days).
+        expr: SEVERITY
+        data_type: VARCHAR(20)
+        sample_values: [Critical, High, Medium, Low]
+      - name: STATUS
+        synonyms: [state, finding_status]
+        description: Detection state, one of Active, Fixed or Reopened. Open vulnerabilities are those that are Active or Reopened.
+        expr: STATUS
+        data_type: VARCHAR(20)
+        sample_values: [Active, Fixed, Reopened]
+      - name: REMEDIATION_STATUS
+        synonyms: [sla_status, sla_state, remediation_state]
+        description: Position against the remediation deadline, one of On Time, Approaching (due within 7 days), Late, Severely Late (more than 30 days past due) or No Target (no due date).
+        expr: REMEDIATION_STATUS
+        data_type: VARCHAR(30)
+        sample_values: [On Time, Approaching, Late, Severely Late, No Target]
+    time_dimensions:
+      - name: FIRST_DETECTED_DATE
+        synonyms: [detected_on, first_seen, opened_date, created_date]
+        description: Date the vulnerability was first detected on the host.
+        expr: FIRST_DETECTED_DATE
+        data_type: DATE
+      - name: LAST_DETECTED_DATE
+        synonyms: [last_seen, last_scan_date]
+        description: Date of the most recent scan that detected the vulnerability.
+        expr: LAST_DETECTED_DATE
+        data_type: DATE
+      - name: DUE_DATE
+        synonyms: [sla_due_date, remediation_deadline, target_date]
+        description: Remediation deadline. Empty if there is no target.
+        expr: DUE_DATE
+        data_type: DATE
+      - name: RESOLVED_DATE
+        synonyms: [fixed_date, closed_date, remediated_on]
+        description: Date the vulnerability was fixed. Empty unless STATUS is Fixed.
+        expr: RESOLVED_DATE
+        data_type: DATE
+    facts:
+      - name: AGE_DAYS
+        synonyms: [age, days_open, days_since_detected]
+        description: Days from first detection to resolution, or to today if unresolved.
+        expr: DATEDIFF('day', FIRST_DETECTED_DATE, COALESCE(RESOLVED_DATE, CURRENT_DATE()))
+        data_type: NUMBER
+      - name: DAYS_PAST_DUE
+        synonyms: [days_overdue, overdue_days]
+        description: Days past the remediation deadline for unresolved vulnerabilities. Negative if not yet due. Empty if there is no due date.
+        expr: DATEDIFF('day', DUE_DATE, CURRENT_DATE())
+        data_type: NUMBER
+      - name: DAYS_TO_REMEDIATE
+        synonyms: [time_to_remediate, time_to_fix, remediation_time]
+        description: Days from first detection to the fix. Empty unless STATUS is Fixed.
+        expr: DATEDIFF('day', FIRST_DETECTED_DATE, RESOLVED_DATE)
+        data_type: NUMBER
+
+  - name: CODE_FINDINGS
+    description: Vulnerable third-party libraries found by code and dependency scanning, one row per library finding in a repository. Use for questions about repositories, libraries, dependencies and fix versions. Separate from host vulnerabilities.
+    base_table:
+      database: ISABEL_SAMPLE
+      schema: SECURITY
+      table: CODE_FINDINGS
+    primary_key:
+      columns:
+        - FINDING_ID
+    dimensions:
+      - name: FINDING_ID
+        synonyms: [code_finding_id]
+        description: Unique identifier of the finding.
+        expr: FINDING_ID
+        data_type: VARCHAR(40)
+        unique: true
+        sample_values: [CF-000001, CF-000002]
+      - name: APPLICATION_ID
+        synonyms: [app_id]
+        description: Application the repository belongs to. Joins to APPLICATIONS.APPLICATION_ID.
+        expr: APPLICATION_ID
+        data_type: NUMBER(10,0)
+        sample_values: ["1001", "1002"]
+      - name: TEAM_ID
+        synonyms: [owning_team_id]
+        description: Team that owns the repository. Empty if unassigned. Joins to TEAMS.TEAM_ID.
+        expr: TEAM_ID
+        data_type: VARCHAR(20)
+        sample_values: [TEAM-001, TEAM-002]
+      - name: REPOSITORY
+        synonyms: [repo, source_repository, code_repository]
+        description: Name of the source repository.
+        expr: REPOSITORY
+        data_type: VARCHAR(200)
+        sample_values: [atlas-portal-api, beacon-gateway-worker]
+      - name: TITLE
+        synonyms: [finding_title, issue]
+        description: Short description of the issue.
+        expr: TITLE
+        data_type: VARCHAR(300)
+        sample_values: [Remote code execution through JNDI lookups in Log4j2]
+      - name: SEVERITY
+        synonyms: [risk, priority]
+        description: Severity of the finding, one of Critical, High, Medium or Low.
+        expr: SEVERITY
+        data_type: VARCHAR(20)
+        sample_values: [Critical, High, Medium]
+      - name: STATUS
+        synonyms: [state, finding_status]
+        description: Finding state, one of Open, Fixed or Ignored. Open means STATUS is Open.
+        expr: STATUS
+        data_type: VARCHAR(20)
+        sample_values: [Open, Fixed, Ignored]
+      - name: CVE_ID
+        synonyms: [cve, cve_number]
+        description: CVE identifier of the vulnerability in the library.
+        expr: CVE_ID
+        data_type: VARCHAR(30)
+        sample_values: [CVE-2021-44228, CVE-2022-22965]
+      - name: LIBRARY_NAME
+        synonyms: [library, package, dependency, artifact]
+        description: Name of the vulnerable library.
+        expr: LIBRARY_NAME
+        data_type: VARCHAR(100)
+        sample_values: [log4j-core, spring-webmvc, lodash]
+      - name: LIBRARY_VERSION
+        synonyms: [current_version, version, installed_version]
+        description: Version of the library in use.
+        expr: LIBRARY_VERSION
+        data_type: VARCHAR(40)
+        sample_values: [2.14.1, 5.3.17, 4.17.15]
+      - name: FIXED_VERSION
+        synonyms: [fix_version, upgrade_to, patched_version]
+        description: First library version that fixes the issue. Empty if no fix is available yet.
+        expr: FIXED_VERSION
+        data_type: VARCHAR(40)
+        sample_values: [2.17.1, 5.3.18, 4.17.21]
+      - name: EXPLOIT_MATURITY
+        synonyms: [exploit_status, exploitability]
+        description: How mature known exploits are, one of Mature, Proof of Concept or No Known Exploit.
+        expr: EXPLOIT_MATURITY
+        data_type: VARCHAR(30)
+        sample_values: [Mature, Proof of Concept, No Known Exploit]
+    time_dimensions:
+      - name: CREATED_DATE
+        synonyms: [found_on, detected_date, opened_date]
+        description: Date the finding was created.
+        expr: CREATED_DATE
+        data_type: DATE
+      - name: DUE_DATE
+        synonyms: [sla_due_date, remediation_deadline]
+        description: Remediation deadline, based on severity.
+        expr: DUE_DATE
+        data_type: DATE
+      - name: RESOLVED_DATE
+        synonyms: [fixed_date, closed_date]
+        description: Date the finding was fixed. Empty unless STATUS is Fixed.
+        expr: RESOLVED_DATE
+        data_type: DATE
+    facts:
+      - name: AGE_DAYS
+        synonyms: [age, days_open]
+        description: Days from creation to resolution, or to today if unresolved.
+        expr: DATEDIFF('day', CREATED_DATE, COALESCE(RESOLVED_DATE, CURRENT_DATE()))
+        data_type: NUMBER
+      - name: DAYS_PAST_DUE
+        synonyms: [days_overdue, overdue_days]
+        description: Days past the remediation deadline. Negative if not yet due.
+        expr: DATEDIFF('day', DUE_DATE, CURRENT_DATE())
+        data_type: NUMBER
+
+relationships:
+  - name: host_vulnerabilities_to_catalog
+    left_table: HOST_VULNERABILITIES
+    right_table: VULNERABILITY_CATALOG
+    relationship_columns:
+      - left_column: CATALOG_ID
+        right_column: CATALOG_ID
+    join_type: left_outer
+    relationship_type: many_to_one
+  - name: host_vulnerabilities_to_applications
+    left_table: HOST_VULNERABILITIES
+    right_table: APPLICATIONS
+    relationship_columns:
+      - left_column: APPLICATION_ID
+        right_column: APPLICATION_ID
+    join_type: left_outer
+    relationship_type: many_to_one
+  - name: host_vulnerabilities_to_teams
+    left_table: HOST_VULNERABILITIES
+    right_table: TEAMS
+    relationship_columns:
+      - left_column: TEAM_ID
+        right_column: TEAM_ID
+    join_type: left_outer
+    relationship_type: many_to_one
+  - name: code_findings_to_applications
+    left_table: CODE_FINDINGS
+    right_table: APPLICATIONS
+    relationship_columns:
+      - left_column: APPLICATION_ID
+        right_column: APPLICATION_ID
+    join_type: left_outer
+    relationship_type: many_to_one
+  - name: code_findings_to_teams
+    left_table: CODE_FINDINGS
+    right_table: TEAMS
+    relationship_columns:
+      - left_column: TEAM_ID
+        right_column: TEAM_ID
+    join_type: left_outer
+    relationship_type: many_to_one
+  - name: applications_to_teams
+    left_table: APPLICATIONS
+    right_table: TEAMS
+    relationship_columns:
+      - left_column: TEAM_ID
+        right_column: TEAM_ID
+    join_type: left_outer
+    relationship_type: many_to_one
+
+verified_queries:
+  - name: open_host_vulnerabilities_by_severity
+    question: How many open host vulnerabilities are there by severity?
+    sql: |
+      SELECT SEVERITY, COUNT(*) AS open_vulnerabilities
+      FROM ISABEL_SAMPLE.SECURITY.HOST_VULNERABILITIES
+      WHERE STATUS IN ('Active', 'Reopened')
+      GROUP BY SEVERITY
+      ORDER BY CASE SEVERITY WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 ELSE 4 END
+    use_as_onboarding_question: true
+    verified_by: Isabel
+    verified_at: 1763481600
+  - name: overdue_critical_host_vulnerabilities_by_team
+    question: Which teams have the most overdue critical host vulnerabilities?
+    sql: |
+      SELECT t.TEAM_NAME, COUNT(*) AS overdue_critical_vulnerabilities
+      FROM ISABEL_SAMPLE.SECURITY.HOST_VULNERABILITIES h
+      LEFT OUTER JOIN ISABEL_SAMPLE.SECURITY.TEAMS t ON h.TEAM_ID = t.TEAM_ID
+      WHERE h.SEVERITY = 'Critical'
+        AND h.STATUS IN ('Active', 'Reopened')
+        AND h.DUE_DATE < CURRENT_DATE()
+      GROUP BY t.TEAM_NAME
+      ORDER BY overdue_critical_vulnerabilities DESC
+      LIMIT 10
+    use_as_onboarding_question: true
+    verified_by: Isabel
+    verified_at: 1763481600
+  - name: critical_applications_with_exploited_vulnerabilities
+    question: Which critical applications have actively exploited vulnerabilities that are still open?
+    sql: |
+      SELECT a.APPLICATION_NAME, t.TEAM_NAME, COUNT(*) AS open_exploited_vulnerabilities
+      FROM ISABEL_SAMPLE.SECURITY.HOST_VULNERABILITIES h
+      LEFT OUTER JOIN ISABEL_SAMPLE.SECURITY.VULNERABILITY_CATALOG c ON h.CATALOG_ID = c.CATALOG_ID
+      LEFT OUTER JOIN ISABEL_SAMPLE.SECURITY.APPLICATIONS a ON h.APPLICATION_ID = a.APPLICATION_ID
+      LEFT OUTER JOIN ISABEL_SAMPLE.SECURITY.TEAMS t ON a.TEAM_ID = t.TEAM_ID
+      WHERE a.CRITICALITY = 'Critical'
+        AND c.ACTIVELY_EXPLOITED = 'Yes'
+        AND h.STATUS IN ('Active', 'Reopened')
+      GROUP BY a.APPLICATION_NAME, t.TEAM_NAME
+      ORDER BY open_exploited_vulnerabilities DESC
+      LIMIT 20
+    use_as_onboarding_question: true
+    verified_by: Isabel
+    verified_at: 1763481600
+  - name: code_findings_with_fix_available
+    question: Which open code findings already have a fixed version available?
+    sql: |
+      SELECT a.APPLICATION_NAME, f.REPOSITORY, f.LIBRARY_NAME, f.LIBRARY_VERSION, f.FIXED_VERSION, f.SEVERITY, f.DUE_DATE
+      FROM ISABEL_SAMPLE.SECURITY.CODE_FINDINGS f
+      LEFT OUTER JOIN ISABEL_SAMPLE.SECURITY.APPLICATIONS a ON f.APPLICATION_ID = a.APPLICATION_ID
+      WHERE f.STATUS = 'Open'
+        AND f.FIXED_VERSION IS NOT NULL
+      ORDER BY CASE f.SEVERITY WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 ELSE 4 END, f.DUE_DATE
+      LIMIT 25
+    verified_by: Isabel
+    verified_at: 1763481600
+  - name: open_vulnerabilities_highest_exploit_probability
+    question: Which open vulnerabilities have the highest exploit probability?
+    sql: |
+      SELECT c.CVE_ID, c.TITLE, c.EPSS_SCORE, c.CVSS_SCORE, COUNT(*) AS affected_hosts
+      FROM ISABEL_SAMPLE.SECURITY.HOST_VULNERABILITIES h
+      LEFT OUTER JOIN ISABEL_SAMPLE.SECURITY.VULNERABILITY_CATALOG c ON h.CATALOG_ID = c.CATALOG_ID
+      WHERE h.STATUS IN ('Active', 'Reopened')
+        AND c.EPSS_SCORE IS NOT NULL
+      GROUP BY c.CVE_ID, c.TITLE, c.EPSS_SCORE, c.CVSS_SCORE
+      ORDER BY c.EPSS_SCORE DESC, affected_hosts DESC
+      LIMIT 10
+    verified_by: Isabel
+    verified_at: 1763481600
+  - name: on_time_remediation_rate_by_team
+    question: What percentage of fixed host vulnerabilities were remediated on time, by team?
+    sql: |
+      SELECT t.TEAM_NAME,
+             COUNT(*) AS fixed_vulnerabilities,
+             ROUND(100.0 * COUNT_IF(h.RESOLVED_DATE <= h.DUE_DATE) / COUNT(*), 1) AS on_time_percent
+      FROM ISABEL_SAMPLE.SECURITY.HOST_VULNERABILITIES h
+      LEFT OUTER JOIN ISABEL_SAMPLE.SECURITY.TEAMS t ON h.TEAM_ID = t.TEAM_ID
+      WHERE h.STATUS = 'Fixed'
+        AND h.DUE_DATE IS NOT NULL
+      GROUP BY t.TEAM_NAME
+      ORDER BY on_time_percent ASC
+    verified_by: Isabel
+    verified_at: 1763481600
+  - name: average_time_to_remediate_by_severity
+    question: What is the average time to remediate host vulnerabilities by severity?
+    sql: |
+      SELECT SEVERITY,
+             COUNT(*) AS fixed_vulnerabilities,
+             ROUND(AVG(DATEDIFF('day', FIRST_DETECTED_DATE, RESOLVED_DATE)), 1) AS avg_days_to_remediate
+      FROM ISABEL_SAMPLE.SECURITY.HOST_VULNERABILITIES
+      WHERE STATUS = 'Fixed'
+      GROUP BY SEVERITY
+      ORDER BY CASE SEVERITY WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 ELSE 4 END
+    verified_by: Isabel
+    verified_at: 1763481600
+  - name: teams_not_assessed_recently
+    question: Which teams have not had a security assessment in the last 180 days?
+    sql: |
+      SELECT TEAM_NAME, TEAM_LEAD, LAST_ASSESSMENT_DATE, ASSESSMENT_SCORE
+      FROM ISABEL_SAMPLE.SECURITY.TEAMS
+      WHERE LAST_ASSESSMENT_DATE IS NULL
+         OR LAST_ASSESSMENT_DATE < DATEADD(DAY, -180, CURRENT_DATE())
+      ORDER BY LAST_ASSESSMENT_DATE ASC NULLS FIRST
+    verified_by: Isabel
+    verified_at: 1763481600
+  - name: applications_with_most_open_findings
+    question: Which applications have the most open findings across host scanning and code scanning?
+    sql: |
+      WITH host AS (
+        SELECT APPLICATION_ID, COUNT(*) AS open_host_vulnerabilities
+        FROM ISABEL_SAMPLE.SECURITY.HOST_VULNERABILITIES
+        WHERE STATUS IN ('Active', 'Reopened')
+        GROUP BY APPLICATION_ID
+      ), code AS (
+        SELECT APPLICATION_ID, COUNT(*) AS open_code_findings
+        FROM ISABEL_SAMPLE.SECURITY.CODE_FINDINGS
+        WHERE STATUS = 'Open'
+        GROUP BY APPLICATION_ID
+      )
+      SELECT a.APPLICATION_NAME, a.CRITICALITY,
+             COALESCE(host.open_host_vulnerabilities, 0) AS open_host_vulnerabilities,
+             COALESCE(code.open_code_findings, 0) AS open_code_findings,
+             COALESCE(host.open_host_vulnerabilities, 0) + COALESCE(code.open_code_findings, 0) AS total_open
+      FROM ISABEL_SAMPLE.SECURITY.APPLICATIONS a
+      LEFT OUTER JOIN host ON a.APPLICATION_ID = host.APPLICATION_ID
+      LEFT OUTER JOIN code ON a.APPLICATION_ID = code.APPLICATION_ID
+      ORDER BY total_open DESC
+      LIMIT 10
+    verified_by: Isabel
+    verified_at: 1763481600
+
+module_custom_instructions:
+  sql_generation: |
+    Use HOST_VULNERABILITIES for questions about vulnerabilities, hosts or scans unless the question mentions code, repositories, libraries or dependencies, in which case use CODE_FINDINGS.
+    For open host vulnerabilities, filter STATUS IN ('Active', 'Reopened'). For open code findings, filter STATUS = 'Open'.
+    Join the two finding tables to APPLICATIONS and TEAMS with left outer joins so that findings without an application or team are kept.
+    To report both host and code findings for one application, aggregate each table in its own CTE and join the CTEs to APPLICATIONS, to avoid multiplying rows.
+    Severity order is Critical, High, Medium, Low.
+  question_categorization: |
+    If the user asks about what a vulnerability or CVE is, how to fix it, or its threat, and does not ask for counts or lists of affected hosts, ask for the catalog search tool instead of generating SQL.
